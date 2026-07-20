@@ -27,4 +27,5 @@ jobs:
       - name: 运行 RSS 推送脚本
         env:
           PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+          FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
         run: python main.py

@@ -8,6 +8,7 @@ RSS_URLS = [
 ]
 
 PUSHPLUS_TOKEN = os.getenv("PUSHPLUS_TOKEN")
+FEISHU_WEBHOOK = os.getenv("FEISHU_WEBHOOK")
 
 
 def pushplus_send(title, content, url):
@@ -27,9 +28,29 @@ def pushplus_send(title, content, url):
 
     try:
         response = requests.post(api_url, json=payload, timeout=15)
-        print("推送结果：", response.json())
+        print("PushPlus 推送结果：", response.json())
     except Exception as e:
-        print("推送异常：", e)
+        print("PushPlus 推送异常：", e)
+
+
+def feishu_send(title, content, url):
+    """通过飞书机器人 Webhook 推送到飞书群"""
+    if not FEISHU_WEBHOOK:
+        print("缺少 FEISHU_WEBHOOK 环境变量")
+        return
+
+    payload = {
+        "msg_type": "text",
+        "content": {
+            "text": f"{title}\n\n{content}\n\n阅读原文：{url}"
+        }
+    }
+
+    try:
+        response = requests.post(FEISHU_WEBHOOK, json=payload, timeout=15)
+        print("飞书推送结果：", response.json())
+    except Exception as e:
+        print("飞书推送异常：", e)
 
 
 def fetch_and_push():
@@ -42,12 +63,10 @@ def fetch_and_push():
             source = feed.feed.get('title', 'RSS 订阅')
 
             content = f"来源：{source}"
+            full_title = f"📰 {title}"
 
-            pushplus_send(
-                title=f"📰 {title}",
-                content=content,
-                url=link
-            )
+            pushplus_send(title=full_title, content=content, url=link)
+            feishu_send(title=full_title, content=content, url=link)
         else:
             print(f"未抓取到内容：{rss_url}")
 
