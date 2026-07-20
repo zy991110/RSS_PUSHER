@@ -1,4 +1,4 @@
-name: RSS 推送到微信
+name: AI 热点推送到微信和飞书
 
 on:
   schedule:
@@ -24,8 +24,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: 运行 RSS 推送脚本
+      - name: 运行 AI 热点推送脚本
         env:
           PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
           FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
-        run: python main.py
+        run: PYTHONPATH=. python feeds/ai_hot.py
