@@ -26,7 +26,8 @@ jobs:
 
       - name: 运行 RSS 推送脚本
         env:
-          WECHAT_CORPID: ${{ secrets.WECHAT_CORPID }}
           WECHAT_AGENTID: ${{ secrets.WECHAT_AGENTID }}
-          WECHAT_CORPSECRET: ${{ secrets.WECHAT_CORPSECRET }}
+          WECHAT_TOUSER: ${{ secrets.WECHAT_TOUSER }}
+          WORKER_URL: ${{ secrets.WORKER_URL }}
+          WORKER_AUTH_TOKEN: ${{ secrets.WORKER_AUTH_TOKEN }}
         run: python main.py
