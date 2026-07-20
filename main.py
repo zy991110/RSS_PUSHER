@@ -7,25 +7,35 @@ RSS_URLS = [
     "https://sspai.com/feed",  # 示例：少数派
 ]
 
-# 企业微信配置
+CORPID = os.getenv("WECHAT_CORPID")
 AGENTID = os.getenv("WECHAT_AGENTID")
-TOUSER = os.getenv("WECHAT_TOUSER", "@all")  # 默认 @all，可指定 UserID 如 "ZhangYu"
+CORPSECRET = os.getenv("WECHAT_CORPSECRET")
+TOUSER = os.getenv("WECHAT_TOUSER", "@all")
 
-# Cloudflare Worker 代理配置
-WORKER_URL = os.getenv("WORKER_URL")  # 例: https://wecom-rss-proxy.your-subdomain.workers.dev
-WORKER_AUTH_TOKEN = os.getenv("WORKER_AUTH_TOKEN")  # 与 Worker 端 AUTH_TOKEN 保持一致
+
+def get_access_token():
+    """获取企业微信 API 调用的 access_token"""
+    url = f"https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid={CORPID}&corpsecret={CORPSECRET}"
+    res = requests.get(url).json()
+    if res.get("errcode") == 0:
+        return res.get("access_token")
+    else:
+        print("获取 access_token 失败：", res)
+        return None
 
 
 def send_wechat_textcard(title, description, url):
-    """通过 Cloudflare Worker 代理发送文本卡片消息到个人微信"""
-    if not WORKER_URL or not WORKER_AUTH_TOKEN:
-        print("缺少 WORKER_URL 或 WORKER_AUTH_TOKEN 环境变量")
+    """发送文本卡片消息到个人微信"""
+    access_token = get_access_token()
+    if not access_token:
         return
+
+    send_url = f"https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token={access_token}"
 
     payload = {
         "touser": TOUSER,
         "msgtype": "textcard",
-        "agentid": int(AGENTID),    # 企业微信 API 要求 agentid 为整型
+        "agentid": int(AGENTID),
         "textcard": {
             "title": title,
             "description": description,
@@ -36,16 +46,8 @@ def send_wechat_textcard(title, description, url):
         "enable_duplicate_check": 0
     }
 
-    headers = {
-        "Authorization": f"Bearer {WORKER_AUTH_TOKEN}",
-        "Content-Type": "application/json"
-    }
-
-    try:
-        response = requests.post(WORKER_URL, json=payload, headers=headers, timeout=15)
-        print("推送结果：", response.json())
-    except Exception as e:
-        print("推送异常：", e)
+    response = requests.post(send_url, json=payload)
+    print("推送结果：", response.json())
 
 
 def fetch_and_push():
@@ -57,7 +59,6 @@ def fetch_and_push():
             link = latest.link
             source = feed.feed.get('title', 'RSS 订阅')
 
-            # 简易摘要/描述
             description = f"来源：{source}\n发布更新，点击下方卡片直达文章。"
 
             send_wechat_textcard(
@@ -67,6 +68,12 @@ def fetch_and_push():
             )
         else:
             print(f"未抓取到内容：{rss_url}")
+
+
+def main_handler(event, context):
+    """腾讯云 SCF 入口函数"""
+    fetch_and_push()
+    return {"statusCode": 200, "body": "ok"}
 
 
 if __name__ == "__main__":
