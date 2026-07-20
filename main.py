@@ -4,7 +4,7 @@ import feedparser
 
 # 配置项：订阅的 RSS 链接
 RSS_URLS = [
-    "https://sspai.com/feed",  # 示例：少数派
+    "https://aihot.virxact.com/feed/daily.xml",  # AI 每日热点
 ]
 
 PUSHPLUS_TOKEN = os.getenv("PUSHPLUS_TOKEN")

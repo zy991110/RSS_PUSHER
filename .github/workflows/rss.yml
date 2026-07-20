@@ -2,8 +2,8 @@ name: RSS 推送到微信
 
 on:
   schedule:
-    # 每 30 分钟执行一次（UTC 时间）
-    - cron: '*/30 * * * *'
+    # 每天早上 9 点（北京时间 UTC+8），对应 UTC 凌晨 1 点
+    - cron: '0 1 * * *'
   workflow_dispatch:  # 允许在 GitHub 网页手动触发，便于测试
 
 jobs:
