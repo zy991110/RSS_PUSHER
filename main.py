@@ -7,47 +7,29 @@ RSS_URLS = [
     "https://sspai.com/feed",  # 示例：少数派
 ]
 
-CORPID = os.getenv("WECHAT_CORPID")
-AGENTID = os.getenv("WECHAT_AGENTID")
-CORPSECRET = os.getenv("WECHAT_CORPSECRET")
-TOUSER = os.getenv("WECHAT_TOUSER", "@all")
+PUSHPLUS_TOKEN = os.getenv("PUSHPLUS_TOKEN")
 
 
-def get_access_token():
-    """获取企业微信 API 调用的 access_token"""
-    url = f"https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid={CORPID}&corpsecret={CORPSECRET}"
-    res = requests.get(url).json()
-    if res.get("errcode") == 0:
-        return res.get("access_token")
-    else:
-        print("获取 access_token 失败：", res)
-        return None
-
-
-def send_wechat_textcard(title, description, url):
-    """发送文本卡片消息到个人微信"""
-    access_token = get_access_token()
-    if not access_token:
+def pushplus_send(title, content, url):
+    """通过 PushPlus 推送到个人微信"""
+    if not PUSHPLUS_TOKEN:
+        print("缺少 PUSHPLUS_TOKEN 环境变量")
         return
 
-    send_url = f"https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token={access_token}"
-
+    api_url = "http://www.pushplus.plus/send"
     payload = {
-        "touser": TOUSER,
-        "msgtype": "textcard",
-        "agentid": int(AGENTID),
-        "textcard": {
-            "title": title,
-            "description": description,
-            "url": url,
-            "btntxt": "详情"
-        },
-        "enable_id_trans": 0,
-        "enable_duplicate_check": 0
+        "token": PUSHPLUS_TOKEN,
+        "title": title,
+        "content": f"{content}<br><br><a href='{url}'>点击阅读原文</a>",
+        "template": "html",
+        "channel": "wechat"
     }
 
-    response = requests.post(send_url, json=payload)
-    print("推送结果：", response.json())
+    try:
+        response = requests.post(api_url, json=payload, timeout=15)
+        print("推送结果：", response.json())
+    except Exception as e:
+        print("推送异常：", e)
 
 
 def fetch_and_push():
@@ -59,21 +41,15 @@ def fetch_and_push():
             link = latest.link
             source = feed.feed.get('title', 'RSS 订阅')
 
-            description = f"来源：{source}\n发布更新，点击下方卡片直达文章。"
+            content = f"来源：{source}"
 
-            send_wechat_textcard(
+            pushplus_send(
                 title=f"📰 {title}",
-                description=description,
+                content=content,
                 url=link
             )
         else:
             print(f"未抓取到内容：{rss_url}")
-
-
-def main_handler(event, context):
-    """腾讯云 SCF 入口函数"""
-    fetch_and_push()
-    return {"statusCode": 200, "body": "ok"}
 
 
 if __name__ == "__main__":
