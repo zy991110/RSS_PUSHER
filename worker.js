@@ -53,15 +53,17 @@ async function fetchLatestEntry(rssUrl) {
   }
 
   const xml = await res.text();
-  const title = extractTag(xml, "title");
-  const link = extractTag(xml, "link");
+
+  // 提取 channel 标题作为来源
   const source = extractChannelTitle(xml) || "RSS 订阅";
 
-  if (!title || !link) {
+  // 提取第一个 <item> 里的标题和链接（即最新文章）
+  const item = extractFirstItem(xml);
+  if (!item || !item.title || !item.link) {
     return null;
   }
 
-  return { title, link, source };
+  return { title: item.title, link: item.link, source };
 }
 
 function extractTag(xml, tagName) {
@@ -77,6 +79,18 @@ function extractChannelTitle(xml) {
     return extractTag(channelMatch[1], "title");
   }
   return null;
+}
+
+function extractFirstItem(xml) {
+  const itemMatch = xml.match(/<item[^>]*>([\s\S]*?)<\/item>/i);
+  if (!itemMatch) {
+    return null;
+  }
+  const itemXml = itemMatch[1];
+  return {
+    title: extractTag(itemXml, "title"),
+    link: extractTag(itemXml, "link"),
+  };
 }
 
 function decodeXmlEntities(str) {
