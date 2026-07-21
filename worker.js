@@ -10,30 +10,37 @@ const RSS_URLS = [
 ];
 
 export default {
+  async fetch(request, env, ctx) {
+    // 支持 HTTP 访问手动触发，便于测试
+    ctx.waitUntil(run(env));
+    return new Response("RSS 推送已触发，请查看 Logs", { status: 200 });
+  },
   async scheduled(event, env, ctx) {
-    for (const rssUrl of RSS_URLS) {
-      try {
-        const entry = await fetchLatestEntry(rssUrl);
-        if (!entry) {
-          console.log(`未抓取到内容：${rssUrl}`);
-          continue;
-        }
-
-        const title = `📰 ${entry.title}`;
-        const content = `来源：${entry.source}`;
-
-        ctx.waitUntil(
-          Promise.all([
-            pushplusSend(env.PUSHPLUS_TOKEN, title, content, entry.link),
-            feishuSend(env.FEISHU_WEBHOOK, title, content, entry.link),
-          ])
-        );
-      } catch (e) {
-        console.error(`处理 RSS 失败：${rssUrl}`, e);
-      }
-    }
+    ctx.waitUntil(run(env));
   },
 };
+
+async function run(env) {
+  for (const rssUrl of RSS_URLS) {
+    try {
+      const entry = await fetchLatestEntry(rssUrl);
+      if (!entry) {
+        console.log(`未抓取到内容：${rssUrl}`);
+        continue;
+      }
+
+      const title = `📰 ${entry.title}`;
+      const content = `来源：${entry.source}`;
+
+      await Promise.all([
+        pushplusSend(env.PUSHPLUS_TOKEN, title, content, entry.link),
+        feishuSend(env.FEISHU_WEBHOOK, title, content, entry.link),
+      ]);
+    } catch (e) {
+      console.error(`处理 RSS 失败：${rssUrl}`, e);
+    }
+  }
+}
 
 async function fetchLatestEntry(rssUrl) {
   const res = await fetch(rssUrl, {
